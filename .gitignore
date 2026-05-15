@@ -1,0 +1,47 @@
+# Large data files - DO NOT UPLOAD TO GITHUB
+checkpoints/
+dataset/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# OS files
+.DS_Store
+.DS_Store?
+Thumbs.db
+
+# Environment
+.env
+*.egg-info/
+*.egg
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Old files
+report.zip
+draft.md
+
+# Old notebook location (now at repo root)
+src/NegMerge.ipynb
+
+# Coursework submission artifacts (for ECS Handin only — keep out of public repo)
+mark_split.pdf
+team.txt

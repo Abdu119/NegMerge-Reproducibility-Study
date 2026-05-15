@@ -1,0 +1,140 @@
+\documentclass{article}
+\usepackage{iclr2025_conference,times}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage[hidelinks]{hyperref}
+
+\title{Reproducibility Study: NegMerge for Machine Unlearning}
+\author{Abdul Azeez Aris \\
+\texttt{aaat1u24@soton.ac.uk}}
+
+\iclrfinalcopy
+\begin{document}
+\maketitle
+
+\begin{abstract}
+NegMerge is a training-free machine unlearning method that aggregates task vectors from multiple fine-tuned models and negates only the parameters where all models agree on the sign of the change (Park et al., 2025). We reproduce NegMerge on CLIP ViT-B/32 with Stanford Cars (forget) and ImageNet (retain) on Apple M3 Max with the MPS backend. Results match the paper closely: 24.08\% Cars (paper 27--28\%), 59.27\% ImageNet (paper 60--61\%), 9.66\% consensus (paper $\sim$10\%). We then extend with an $N$-variation ablation across $N \in \{3, 5, 10, 15, 20, 25, 30\}$ with three random subsets each, an experiment the authors did not run. The ablation exposes a finding the original paper missed: forget quality is non-monotonic in $N$, because the optimal $\alpha$ shifts in discrete steps as $N$ grows. At matched $\alpha = 0.90$, $N = 20$ outperforms $N = 30$ on Cars (24.04\% vs 26.41\%). So $N = 30$'s advantage comes from tolerating a higher $\alpha$, not from more checkpoints. $N = 20$ already matches $N = 30$ overall. Reproduction required three adaptations: an MPS preprocessing patch, HuggingFace sourcing after the Stanford URLs went dead, and threshold recalibration for an unspecified ImageNet variant. Code: \url{https://github.com/Abdu119/NegMerge-Reproducibility-Study}.
+\end{abstract}
+
+\section{Introduction}
+
+Machine unlearning is motivated by data privacy regulations such as the GDPR, which grants individuals the right to have their data removed from deployed systems. Retraining large models from scratch would cost thousands of GPU-hours. So we need methods that remove data influence post-hoc. Task-arithmetic-based unlearning (Ilharco et al., 2023) is one such approach: the method fine-tunes a model on the forget set, computes the task vector $\tau = \theta_{\text{fine-tuned}} - \theta_{\text{pretrained}}$, then subtracts this from the pretrained weights. The problem is fragility. Different fine-tuning hyperparameters produce radically different task vectors, so picking the right hyperparameters requires extensive validation. NegMerge (Park et al., 2025) addresses this by aggregating all fine-tuned models instead of selecting one. For each weight position, it merges only the weights where every model agrees on the sign of the change (sign consensus), then subtracts this merged vector, scaled by a coefficient $\alpha$, from the pretrained weights. The method is training-free and reuses compute already spent on hyperparameter search. We reproduce NegMerge on CLIP ViT-B/32 (Radford et al., 2021) with Stanford Cars (Krause et al., 2013) as the forget set and ImageNet (Deng et al., 2009) as the retain set. We verify three numerical claims from the paper. (1) Cars accuracy drops to around 27--28\%. (2) ImageNet retains around 60--61\%. (3) The sign-consensus rate across 30 fine-tuned models is approximately 10\%.
+
+\section{Critical Analysis of Experimental Design}
+
+\subsection{Strengths}
+
+The paper does three things well for reproducibility. First, the fine-tuning grid is specified: learning rates $\{10^{-5}, 10^{-6}\}$, weight decay $\{0.0, 0.1, 0.2\}$, and epochs $\{1..5\}$, giving 30 combinations with no ambiguity. Second, the rule for selecting $\alpha$ is objective: retain-set accuracy must stay at or above 95\% of baseline, which makes coefficient selection independently verifiable. Third, once the fine-tuned models exist, the unlearning itself is pure tensor arithmetic with no training, no loss function, and no optimiser. This eliminates a major source of cross-platform variance.
+
+\subsection{Weaknesses and Underspecified Elements}
+
+Several aspects of the experimental setup are underspecified or hardware-dependent. The paper does not state which ImageNet variant it uses, even though face-blurred ImageNet yields a baseline of 62.37\% while the standard variant yields 66.66\%. This 4 pp gap propagates into the 95\% retention threshold and changes which $\alpha$ gets selected. The Stanford-hosted URLs for the Cars dataset returned 404 errors, and no backup URLs or checksums are provided, so reproducers must rely on third-party mirrors they cannot verify. The \texttt{timm} library's \texttt{MaybeToTensor} transform let PIL images pass through unconverted in the MPS pipeline, silently producing incorrect outputs rather than raising an error. The authors release checkpoints but not fine-tuning logs, so verifying that the checkpoints correspond to the stated 30-configuration grid would require redoing roughly 30 GPU-hours of fine-tuning. Finally, the paper fixes $N = 30$ without justification, and our $N$-variation experiment (Section~\ref{sec:nvar}) shows $N = 20$ already achieves equivalent results.
+
+\subsection{Evaluation Protocol}
+
+The paper evaluates accuracy via CLIP's zero-shot classification, comparing image embeddings to text embeddings using cosine similarity. This correctly isolates changes to the image encoder, which is the part NegMerge modifies. However, the classification heads are derived from the pretrained model and stay frozen, so unlearning shifts the embeddings but not the heads. This can understate both forgetting and retention. A fairer protocol would either recompute heads after unlearning or use a head-free metric such as nearest-neighbour recall.
+
+\section{Methodology}
+
+\subsection{Implementation Details}
+
+The experiments ran on an Apple M3 Max with 36 GB of unified memory, using Python 3.10, PyTorch 2.6, \texttt{open\_clip} for the CLIP implementation, and \texttt{timm} for vision transforms. CLIP ViT-B/32 has 151M total parameters with 113.4M in the image encoder. Stanford Cars came from \texttt{tanganke/stanford\_cars} on HuggingFace (8,144 train, 8,041 test), and the ImageNet validation set was the face-blurred variant with 50,000 images. The 30 fine-tuned checkpoints from the authors total around 90 GB. We merged on CPU to avoid device-mismatch errors when loading, then used MPS for inference with batch size 128 and 4 workers.
+
+Three substantive code adaptations were required. First, we patched \texttt{timm}'s \texttt{MaybeToTensor} to explicitly convert PIL inputs to tensors, since PIL images were passing through unconverted in the MPS pipeline and failing silently rather than raising an error. Second, we replaced the broken Stanford Cars loader with the HuggingFace mirror, verifying correctness by matching the expected pretrained Cars accuracy of 59.58\%. Third, we recomputed the 95\% retention threshold to $0.95 \times 62.37\% = 59.25\%$ based on our measured ImageNet baseline. Two smaller PyTorch 2.6 fixes were also needed: \texttt{weights\_only=False} in \texttt{torch.load()}, and \texttt{patch\_vision\_transformer\_deep()} on all loaded models. The coefficient sweep covered five $\alpha$ values $\{0.50, 0.75, 0.90, 0.95, 1.00\}$, reduced from the paper's 21-value 0.05-step grid to bound compute, with $\alpha = 0.00$ as the no-unlearning baseline, and total compute was 4.2 hours across 19 ($N$, seed) configurations including the $N = 30$ main reproduction. We did not regenerate the 30 fine-tuned checkpoints, reproduce alternative backbones (ViT-L/14, ResNet), or run the CIFAR experiments.
+
+\subsection{The NegMerge Algorithm}
+
+For each of $N$ fine-tuned models, compute the task vector $\tau_i = \theta_i - \theta_{\text{pretrained}}$. For each parameter position $j$, compute $s_j = \sum_{i=1}^{N} \text{sign}(\tau_{i,j})$. A consensus exists when $|s_j| = N$, meaning all models shifted that weight in the same direction. Such positions are likely to encode forget-set-specific information that survives different fine-tuning configurations, while disagreement positions vary across fine-tuning configurations. At consensus positions, average the task vectors. Elsewhere, set the value to zero:
+\begin{equation}
+\tau_{\text{merged},j} = \begin{cases} \frac{1}{N}\sum_{i=1}^{N} \tau_{i,j} & \text{if } |s_j| = N \\ 0 & \text{otherwise} \end{cases}
+\end{equation}
+The unlearned model is $\theta_{\text{unlearned}} = \theta_{\text{pretrained}} - \alpha \cdot \tau_{\text{merged}}$. The coefficient $\alpha$ is swept over $\{0.50, 0.75, 0.90, 0.95, 1.00\}$ plus a no-unlearning baseline at $\alpha = 0.00$. The optimal $\alpha$ is the largest value that keeps retain-set accuracy at or above 95\% of baseline.
+
+\section{Results}
+
+\subsection{Sign Consensus and Coefficient Sweep}
+
+Of the 113,448,705 parameters in the image encoder, 10,961,529 had unanimous sign agreement across all 30 fine-tuned models. This 9.66\% consensus rate matches the $\sim$10\% reported by Park et al. (2025). So roughly 90\% varies across hyperparameter configurations, while the remaining 10\% consistently encodes Cars-specific information.
+
+\begin{table}[h]
+\caption{Accuracy versus scaling coefficient $\alpha$ at $N=30$. Retention threshold: 59.25\%.}
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{cccc}
+\toprule
+$\alpha$ & Cars (forget) & ImageNet (retain) & Pass \\
+\midrule
+0.00 & 59.58\% & 62.37\% & \checkmark \\
+0.50 & 41.52\% & 61.43\% & \checkmark \\
+0.75 & 31.08\% & 60.31\% & \checkmark \\
+0.90 & 26.41\% & 59.73\% & \checkmark \\
+0.95 & 24.08\% & 59.27\% & \checkmark \\
+1.00 & 22.85\% & 59.05\% & $\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Cars accuracy drops steadily as $\alpha$ grows while ImageNet degrades much more slowly. This matches NegMerge's intended behaviour of reducing forget-set accuracy without materially damaging retain-set performance. The optimal $\alpha$ is 0.95, and at $\alpha = 1.0$ ImageNet falls 0.20 pp below the threshold. Our reproduction matches the paper within 4 pp on forgetting, 1 pp on retention, and 0.3 pp on consensus rate.
+
+\subsection{$N$-Variation Ablation}\label{sec:nvar}
+
+We extended the paper's setup by varying $N \in \{3, 5, 10, 15, 20, 25, 30\}$ with three random subsets per $N$. $N = 30$ uses all available checkpoints and is therefore a single deterministic configuration. The optimal $\alpha$ was selected from $\{0.50, 0.75, 0.90, 0.95, 1.00\}$ under the same 95\% retention constraint.
+
+\begin{table}[h]
+\caption{$N$-variation ablation. Mean $\pm$ std over 3 random subsets. $N = 30$ is deterministic. At $N = 3$, $\alpha = 0.95$ dropped ImageNet to 50.9\% (well below the 59.25\% threshold), so the optimal $\alpha$ reverts to 0.50.}
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{ccccc}
+\toprule
+$N$ & Consensus (\%) & Cars (\%) & ImageNet (\%) & opt. $\alpha$ \\
+\midrule
+3 & $30.62 \pm 4.18$ & $32.27 \pm 1.73$ & $60.23 \pm 0.43$ & 0.50 \\
+5 & $21.93 \pm 1.84$ & $35.18 \pm 0.50$ & $60.84 \pm 0.11$ & 0.50 \\
+10 & $15.04 \pm 0.54$ & $25.76 \pm 0.28$ & $59.61 \pm 0.12$ & 0.75 \\
+15 & $12.61 \pm 0.52$ & $28.62 \pm 0.54$ & $60.03 \pm 0.12$ & 0.75 \\
+20 & $11.32 \pm 0.29$ & $24.04 \pm 0.07$ & $59.33 \pm 0.01$ & 0.90 \\
+25 & $10.25 \pm 0.04$ & $25.31 \pm 0.12$ & $59.49 \pm 0.07$ & 0.90 \\
+30 & 9.66 ($n=1$) & 24.08 ($n=1$) & 59.27 ($n=1$) & 0.95 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two trends are immediate. The consensus rate falls monotonically from 30.6\% at $N=3$ to 9.66\% at $N=30$, reflecting chance-agreement behaviour. The optimal $\alpha$ rises stepwise: 0.50 for $N \in \{3, 5\}$, 0.75 for $N \in \{10, 15\}$, 0.90 for $N \in \{20, 25\}$, and 0.95 for $N=30$. Larger $N$ produces a sparser but cleaner merged vector. So it tolerates more aggressive scaling before breaking retention.
+
+Per-group sample SDs span 0.07 pp at $N=20$ to 1.73 pp at $N=3$, so we cite the within-plateau pooled SD rather than a single across-experiment number. On the $\alpha=0.75$ plateau the pooled SD across $N=10$ and $N=15$ is 0.43 pp. Across all three matched subsets, $N=15$ Cars exceeded $N=10$ (Cohen's $d=6.69$, mean gap 2.87 pp $\approx 6.7\times$ this pooled SD), so the effect is consistent rather than driven by a single subset. Cross-plateau $\alpha$-ceiling drops dominate within-plateau drift on the first two transitions: a 9.42 pp drop at $N=5 \to 10$ versus 2.91 pp drift within the preceding $\alpha=0.50$ plateau ($N=3 \to 5$), and a 4.59 pp drop at $N=15 \to 20$ versus 2.87 pp drift within the preceding $\alpha=0.75$ plateau ($N=10 \to 15$). At $N=25 \to 30$ the drop (1.23 pp) is comparable to the $\alpha=0.90$ within-plateau drift (1.27 pp, $N=20 \to 25$). So returns diminish past $N \approx 25$. A matched-$\alpha$ comparison strengthens this point. At $\alpha=0.90$, $N=20$ achieves 24.04\% Cars while $N=30$ achieves 26.41\% (Table~1). So $N=30$'s advantage comes from tolerating $\alpha=0.95$, not from a cleaner signal at fixed $\alpha$.
+
+\section{Reflection}
+
+All three of the paper's claims hold. Cars accuracy falls from 59.58\% to 24.08\% (paper: 27--28\%). ImageNet retains 59.27\%, exactly 95.0\% of our 62.37\% baseline (paper: 60--61\%). Sign consensus is 9.66\% across all 30 models (paper: $\sim$10\%). Our Cars drop slightly exceeds the paper's, because our lower baseline allows a higher $\alpha$ (0.95) before retention breaks. All three margins lie between 0.3 and 4 pp despite the change in hardware (MPS vs CUDA) and ImageNet variant. So the mechanism generalises beyond CUDA and standard ImageNet.
+
+The $N$-variation ablation reveals behaviour that the original paper does not report, since it only studies $N = 30$. The optimal $\alpha$ moves in discrete jumps because the sweep grid is coarse and only some values satisfy 95\% retention. Thus, forget quality is non-monotonic in $N$. Between $N = 10$ and $N = 15$, more checkpoints worsen forgetting at $\alpha = 0.75$ (25.76\% Cars rises to 28.62\%). The reason is that adding checkpoints tightens consensus and shrinks the merged vector, an effect that outweighs the cleaner signal at fixed $\alpha$. Forgetting improves again at $N = 20$ because retention gains headroom to unlock $\alpha = 0.90$. A user with fewer than 30 checkpoints cannot copy $\alpha = 0.95$ from the paper, since doing so would push ImageNet far below the 95\% threshold.
+
+The reproduction raises two broader concerns. First, a 4 pp baseline shift caused by an unspecified dataset variant is a serious problem, since unlearning benchmarks report percentage-point changes that only mean something on a fixed test set. Papers in this area should publish dataset checksums alongside hyperparameters. Second, low zero-shot Cars accuracy is a coarse proxy for actual forgetting. An embedding scoring 24\% on zero-shot Cars may still encode Cars information a different probe could recover. The paper assumes low accuracy means deleted information, but that assumption would need adversarial probing to support a GDPR-compliance claim.
+
+\textbf{Limitations of this study.} We reproduced only ViT-B/32 on Cars and ImageNet. ViT-L/14, ResNet, and CIFAR results were out of scope. We used the authors' released checkpoints rather than regenerating them, so we inherit any drift between released weights and the stated fine-tuning grid. We also inherit the frozen-head protocol critiqued in Section 2.3, so our numbers carry the same understatement bias.
+
+\section{Conclusion}
+
+NegMerge's three evaluated claims reproduce closely on consumer hardware with 4.2 hours of compute and no dedicated GPU. Our $N$-variation extension shows forget quality is non-monotonic in the number of checkpoints. $N = 20$ already matches $N = 30$. Future unlearning work should publish dataset checksums, document backend assumptions, report performance across $N$, and release fine-tuning logs alongside checkpoints.
+
+\subsubsection*{References}
+
+\begingroup
+\scriptsize
+\setlength{\parskip}{2pt}
+
+J. Park, J. Lee, J. Ham, and M. Choi, ``NegMerge: Consensual weight negation for strong machine unlearning,'' in \textit{Proc. ICML}, 2025.
+
+G. Ilharco et al., ``Editing models with task arithmetic,'' in \textit{Proc. ICLR}, 2023.
+
+A. Radford et al., ``Learning transferable visual models from natural language supervision,'' in \textit{Proc. ICML}, 2021, pp. 8748--8763.
+
+J. Krause et al., ``3D object representations for fine-grained categorization,'' in \textit{Proc. IEEE ICCVW}, 2013, pp. 554--561.
+
+J. Deng et al., ``ImageNet: A large-scale hierarchical image database,'' in \textit{Proc. IEEE CVPR}, 2009, pp. 248--255.
+\endgroup
+
+\end{document}

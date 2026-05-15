@@ -1,0 +1,242 @@
+{
+  "source": "json",
+  "n_per_group": {
+    "3": 3,
+    "5": 3,
+    "10": 3,
+    "15": 3,
+    "20": 3,
+    "25": 3,
+    "30": 1
+  },
+  "within_plateau": [
+    {
+      "plateau": "\u03b1=0.50",
+      "low_N": 3,
+      "high_N": 5,
+      "low_seeds_cars_pp": [
+        30.46683046683047,
+        32.432432432432435,
+        33.90663390663391
+      ],
+      "high_seeds_cars_pp": [
+        34.88943488943489,
+        34.88943488943489,
+        35.749385749385745
+      ],
+      "welch": {
+        "n_x": 3,
+        "n_y": 3,
+        "mean_x": 32.268632268632274,
+        "mean_y": 35.176085176085174,
+        "std_x": 1.725741810459088,
+        "std_y": 0.4964928604824773,
+        "diff_y_minus_x": 2.9074529074528996,
+        "welch_se": 1.036772227778227,
+        "t": 2.8043313946434383,
+        "df": 2.3288283054425887,
+        "p_two_sided": 0.09030710399780387,
+        "cohens_d": 2.289726995514649,
+        "pooled_sd": 1.2697814687726159,
+        "scipy_t": 2.8043313946434383,
+        "scipy_p": 0.09030710399780387
+      }
+    },
+    {
+      "plateau": "\u03b1=0.75",
+      "low_N": 10,
+      "high_N": 15,
+      "low_seeds_cars_pp": [
+        25.429975429975432,
+        25.921375921375923,
+        25.921375921375923
+      ],
+      "high_seeds_cars_pp": [
+        28.37837837837838,
+        28.255528255528255,
+        29.238329238329236
+      ],
+      "welch": {
+        "n_x": 3,
+        "n_y": 3,
+        "mean_x": 25.75757575757576,
+        "mean_y": 28.624078624078624,
+        "std_x": 0.28371020598998764,
+        "std_y": 0.5354912707052412,
+        "diff_y_minus_x": 2.866502866502863,
+        "welch_se": 0.3498773032480554,
+        "t": 8.192880303729147,
+        "df": 3.0407988587731833,
+        "p_two_sided": 0.003619056473743311,
+        "cohens_d": 6.689458755944958,
+        "pooled_sd": 0.42851043276937556,
+        "scipy_t": 8.192880303729147,
+        "scipy_p": 0.003619056473743311
+      }
+    },
+    {
+      "plateau": "\u03b1=0.90",
+      "low_N": 20,
+      "high_N": 25,
+      "low_seeds_cars_pp": [
+        23.955773955773957,
+        24.078624078624077,
+        24.078624078624077
+      ],
+      "high_seeds_cars_pp": [
+        25.429975429975432,
+        25.307125307125304,
+        25.184275184275183
+      ],
+      "welch": {
+        "n_x": 3,
+        "n_y": 3,
+        "mean_x": 24.037674037674037,
+        "mean_y": 25.307125307125304,
+        "std_x": 0.07092755149749588,
+        "std_y": 0.12285012285012442,
+        "diff_y_minus_x": 1.2694512694512667,
+        "welch_se": 0.08190008190008236,
+        "t": 15.499999999999881,
+        "df": 3.1999999999999447,
+        "p_two_sided": 0.0004052156724328298,
+        "cohens_d": 12.655697004379656,
+        "pooled_sd": 0.10030670527367698,
+        "scipy_t": 15.499999999999881,
+        "scipy_p": 0.0004052156724328298
+      }
+    }
+  ],
+  "pooled_sd": {
+    "scope_a_N10_N15": {
+      "pooled_sd_pp": 0.42851043276937556,
+      "df": 4,
+      "per_group_sd_pp": {
+        "N=10": 0.28371020598998764,
+        "N=15": 0.5354912707052412
+      }
+    },
+    "scope_b_all_stochastic": {
+      "pooled_sd_pp": 0.7758925193077969,
+      "df": 12,
+      "per_group_sd_pp": {
+        "N=3": 1.725741810459088,
+        "N=5": 0.4964928604824773,
+        "N=10": 0.28371020598998764,
+        "N=15": 0.5354912707052412,
+        "N=20": 0.07092755149749588,
+        "N=25": 0.12285012285012442
+      }
+    },
+    "scope_c_plateau_pairs_only": {
+      "pooled_sd_pp": 0.7758925193077969,
+      "df": 12,
+      "per_pair_pooled_sd_pp": {
+        "\u03b1=0.50": 1.2697814687726159,
+        "\u03b1=0.75": 0.42851043276937556,
+        "\u03b1=0.90": 0.10030670527367698
+      }
+    },
+    "note": "With equal n=3 across all stochastic groups, scopes (b) and (c) are the same pooled variance; the labelling is what differs.",
+    "recommended": "scope_a_N10_N15"
+  },
+  "cross_plateau_drops": [
+    {
+      "label": "N=5 \u2192 N=10  (\u03b1 0.50 \u2192 0.75)",
+      "from_N": 5,
+      "to_N": 10,
+      "from_mean_cars_pp": 35.176085176085174,
+      "to_mean_cars_pp": 25.75757575757576,
+      "drop_pp": 9.418509418509412,
+      "drift_pair": [
+        3,
+        5
+      ],
+      "drift_pp": 2.9074529074528996,
+      "drop_minus_drift_pp": 6.511056511056513,
+      "drop_over_drift": 3.239436619718316,
+      "verdict": "DROP > DRIFT",
+      "cross_welch": {
+        "n_x": 3,
+        "n_y": 3,
+        "mean_x": 25.75757575757576,
+        "mean_y": 35.176085176085174,
+        "std_x": 0.28371020598998764,
+        "std_y": 0.4964928604824773,
+        "diff_y_minus_x": 9.418509418509412,
+        "welch_se": 0.3301497849426095,
+        "t": -28.52798895551802,
+        "df": 3.1802785095972945,
+        "p_two_sided": 6.105561094420463e-05,
+        "cohens_d": -23.29300544292439,
+        "pooled_sd": 0.40434925589949705,
+        "scipy_t": 28.52798895551802,
+        "scipy_p": 6.105561094420463e-05
+      }
+    },
+    {
+      "label": "N=15 \u2192 N=20 (\u03b1 0.75 \u2192 0.90)",
+      "from_N": 15,
+      "to_N": 20,
+      "from_mean_cars_pp": 28.624078624078624,
+      "to_mean_cars_pp": 24.037674037674037,
+      "drop_pp": 4.586404586404587,
+      "drift_pair": [
+        10,
+        15
+      ],
+      "drift_pp": 2.866502866502863,
+      "drop_minus_drift_pp": 1.7199017199017241,
+      "drop_over_drift": 1.6000000000000023,
+      "verdict": "DROP > DRIFT",
+      "cross_welch": {
+        "n_x": 3,
+        "n_y": 3,
+        "mean_x": 24.037674037674037,
+        "mean_y": 28.624078624078624,
+        "std_x": 0.07092755149749588,
+        "std_y": 0.5354912707052412,
+        "diff_y_minus_x": 4.586404586404587,
+        "welch_se": 0.3118662205513468,
+        "t": -14.706320480288968,
+        "df": 2.0701538461538442,
+        "p_two_sided": 0.003982025785143006,
+        "cohens_d": -12.007660390183336,
+        "pooled_sd": 0.38195655418054014,
+        "scipy_t": 14.706320480288968,
+        "scipy_p": 0.003982025785143006
+      }
+    },
+    {
+      "label": "N=25 \u2192 N=30 (\u03b1 0.90 \u2192 0.95)",
+      "from_N": 25,
+      "to_N": 30,
+      "from_mean_cars_pp": 25.307125307125304,
+      "to_mean_cars_pp": 24.078624078624077,
+      "drop_pp": 1.2285012285012264,
+      "drift_pair": [
+        20,
+        25
+      ],
+      "drift_pp": 1.2694512694512667,
+      "drop_minus_drift_pp": -0.04095004095004029,
+      "drop_over_drift": 0.9677419354838714,
+      "verdict": "DROP \u2248 DRIFT",
+      "cross_welch": null
+    }
+  ],
+  "n3_imagenet_collapse_at_alpha_0_95": {
+    "alpha": 0.95,
+    "N": 3,
+    "imagenet_pp_per_seed": [
+      48.62972594518904,
+      51.69033806761353,
+      52.35047009401881
+    ],
+    "imagenet_pp_mean": 50.89017803560713,
+    "imagenet_pp_std": 1.9852396109482897,
+    "threshold_pp": 59.25,
+    "shortfall_pp": -8.359821964392872
+  },
+  "markdown": "### \u00a74.2 \u2014 replacement paragraph (\u2264120 words)\n\nSeed variance is not pooled-uniform across the ablation. Per-group sample SDs span 0.07 pp at N=20 to 1.73 pp at N=3 (\u224824\u00d7 range), so we cite the within-plateau pooled SD rather than a single across-experiment number. On the \u03b1=0.75 plateau the pooled SD across N=10 and N=15 is **0.43 pp**, and the N=15 \u2212 N=10 mean Cars gap of **2.87 pp** is highly significant under Welch's t (t=8.19, df=3.04, p=0.0036, Cohen's d=6.69). Cross-plateau \u03b1-ceiling drops dominate within-plateau drift on the first two transitions (N=5\u219210: 9.42 vs 2.91 pp; N=15\u219220: 4.59 vs 2.87 pp), but at N=25\u219230 the drop (1.23 pp) is comparable to drift (1.27 pp), suggesting diminishing returns past N\u224825.\n\n### Table 2 footnote\n\nAt N=3, pushing \u03b1 to 0.95 collapses ImageNet retention to a 3-seed mean of 50.89 pp (individual seeds: 48.63, 51.69, 52.35 pp), 8.36 pp below the 59.25 pp retention threshold; this is why the optimal \u03b1 reverts to 0.50 in row N=3 of Table 2.\n"
+}
