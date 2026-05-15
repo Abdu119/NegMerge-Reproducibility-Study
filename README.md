@@ -23,7 +23,7 @@ In addition to verifying the paper's three numerical claims, we extend the study
 | ImageNet accuracy (retain) | ~60–61% | **59.27%** |
 | Sign consensus rate (N=30) | ~10% | **9.66%** |
 | Optimal coefficient α | — | **0.95** |
-| Total compute | — | **4.2 hours** (no dedicated GPU) |
+| Total compute | — | **4.2 hours** on Apple Silicon GPU via MPS |
 
 All three of the paper's central claims were **confirmed**.
 
@@ -160,7 +160,7 @@ Applied `patch_vision_transformer_deep()` to all loaded models for architecture 
 - **Storage**: ~90GB for checkpoints, ~150GB for ImageNet
 - **RAM**: 32GB+ recommended
 
-No dedicated GPU required for the reproduction itself; total compute was 4.2 hours across 19 (N, seed) configurations.
+Compute used the M3 Max's integrated GPU via Apple's MPS backend — no discrete (NVIDIA/CUDA) GPU required. Total time was 4.2 hours across 19 (N, seed) configurations.
 
 ## Citation
 
